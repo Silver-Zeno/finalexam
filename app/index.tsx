@@ -1,6 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
-import { Image, Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
+import CartItem from "./components/CartItem";
+import CartSummary from "./components/CartSummary";
+import ProductCard from "./components/ProductCard";
 import { products } from "./data/products";
 
 export default function HomeScreen() {
@@ -12,9 +15,14 @@ export default function HomeScreen() {
   }, []);
 
   const loadCart = async () => {
-    const saved = await AsyncStorage.getItem("cart");
-    if (saved) {
-      setCart(JSON.parse(saved));
+    try {
+      const saved = await AsyncStorage.getItem("cart");
+
+      if (saved) {
+        setCart(JSON.parse(saved));
+      }
+    } catch (error) {
+      console.log("Error loading cart:", error);
     }
   };
 
@@ -22,13 +30,29 @@ export default function HomeScreen() {
     AsyncStorage.setItem("cart", JSON.stringify(cart));
   }, [cart]);
 
+  const getTotalItems = () => {
+    return cart.reduce((total, item) => total + (item.qty ?? 1), 0);
+  };
+
+  const getGrandTotal = () => {
+    return cart.reduce(
+      (total, item) => total + item.price * (item.qty ?? 1),
+      0,
+    );
+  };
+
   const addToCart = (product: any) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id);
 
       if (existing) {
         return prev.map((item) =>
-          item.id === product.id ? { ...item, qty: (item.qty || 1) + 1 } : item,
+          item.id === product.id
+            ? {
+                ...item,
+                qty: (item.qty ?? 1) + 1,
+              }
+            : item,
         );
       }
 
@@ -36,9 +60,39 @@ export default function HomeScreen() {
     });
   };
 
+  const increaseQty = (id: number) => {
+    setCart((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              qty: (item.qty ?? 1) + 1,
+            }
+          : item,
+      ),
+    );
+  };
+
+  const decreaseQty = (id: number) => {
+    setCart((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              qty: Math.max((item.qty ?? 1) - 1, 1),
+            }
+          : item,
+      ),
+    );
+  };
+
+  const removeItem = (id: number) => {
+    setCart((prev) => prev.filter((item) => item.id !== id));
+  };
+
   if (showCart) {
     return (
-      <ScrollView className="flex-1 p-4 bg-gray-100 ">
+      <ScrollView className="flex-1 bg-gray-100 p-4">
         <Text className="text-2xl font-bold mb-4">Cart</Text>
 
         <Pressable onPress={() => setShowCart(false)}>
@@ -46,71 +100,48 @@ export default function HomeScreen() {
         </Pressable>
 
         {cart.length === 0 ? (
-          <Text>No items in cart</Text>
+          <Text className="text-center mt-5">No items in cart</Text>
         ) : (
-          cart.map((item, index) => (
-            <View
-              key={index}
-              className="bg-white w-[300px] p-4 mb-4 rounded-lg items-center "
-            >
-              <Image
-                source={item.image}
-                style={{ width: 300, height: 300 }}
-                resizeMode="contain"
+          <View className="items-center">
+            {cart.map((item) => (
+              <CartItem
+                key={item.id}
+                item={item}
+                onIncrease={() => increaseQty(item.id)}
+                onDecrease={() => decreaseQty(item.id)}
+                onRemove={() => removeItem(item.id)}
               />
+            ))}
 
-              <Text className="font-semibold mt-2">{item.name}</Text>
-
-              <Text className="text-green-600">₱{item.price}</Text>
-
-              <Text className="mt-2 font-bold">Qty: {item.qty}</Text>
-
-              <Pressable
-                onPress={() => {
-                  setCart((prev) => prev.filter((i) => i.id !== item.id));
-                }}
-                className="bg-red-500 p-2 mt-3 rounded"
-              >
-                <Text className="text-white text-center">Remove</Text>
-              </Pressable>
-            </View>
-          ))
+            <CartSummary
+              totalItems={getTotalItems()}
+              grandTotal={getGrandTotal()}
+            />
+          </View>
         )}
       </ScrollView>
     );
   }
 
   return (
-    <ScrollView className="flex-1 bg-gray-100 p-4 ">
+    <ScrollView className="flex-1 bg-gray-100 p-4">
       <Text className="text-2xl font-bold mb-4">Products</Text>
 
       <Pressable onPress={() => setShowCart(true)}>
-        <Text className="text-blue-500 mb-4">Go to Cart ({cart.length})</Text>
+        <Text className="text-blue-500 mb-4">
+          Go to Cart ({getTotalItems()})
+        </Text>
       </Pressable>
 
-      {products.map((item) => (
-        <View
-          key={item.id}
-          className="bg-white w-[400px] rounded-2xl p-4 mb-4 shadow items-center"
-        >
-          <Image
-            source={item.image}
-            style={{ width: 300, height: 300 }}
-            resizeMode="contain"
+      <View className="items-center">
+        {products.map((item) => (
+          <ProductCard
+            key={item.id}
+            item={item}
+            onAddToCart={() => addToCart(item)}
           />
-
-          <Text className="text-lg font-semibold mt-2">{item.name}</Text>
-
-          <Text className="text-green-600 font-bold">₱{item.price}</Text>
-
-          <Pressable
-            onPress={() => addToCart(item)}
-            className="bg-black p-2 mt-3 rounded"
-          >
-            <Text className="text-white text-center">Add to Cart</Text>
-          </Pressable>
-        </View>
-      ))}
+        ))}
+      </View>
     </ScrollView>
   );
 }
