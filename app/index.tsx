@@ -7,7 +7,6 @@ export default function HomeScreen() {
   const [cart, setCart] = useState<any[]>([]);
   const [showCart, setShowCart] = useState(false);
 
-  // ✅ LOAD CART ON START
   useEffect(() => {
     loadCart();
   }, []);
@@ -19,12 +18,10 @@ export default function HomeScreen() {
     }
   };
 
-  // ✅ SAVE CART EVERY CHANGE
   useEffect(() => {
     AsyncStorage.setItem("cart", JSON.stringify(cart));
   }, [cart]);
 
-  // ✅ ADD TO CART (with quantity)
   const addToCart = (product: any) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id);
@@ -39,7 +36,6 @@ export default function HomeScreen() {
     });
   };
 
-  // 🛒 CART SCREEN
   if (showCart) {
     return (
       <ScrollView className="flex-1 p-4 bg-gray-100 ">
@@ -69,7 +65,6 @@ export default function HomeScreen() {
 
               <Text className="mt-2 font-bold">Qty: {item.qty}</Text>
 
-              {/* REMOVE BUTTON */}
               <Pressable
                 onPress={() => {
                   setCart((prev) => prev.filter((i) => i.id !== item.id));
@@ -85,7 +80,6 @@ export default function HomeScreen() {
     );
   }
 
-  // 🛍️ PRODUCT SCREEN
   return (
     <ScrollView className="flex-1 bg-gray-100 p-4 ">
       <Text className="text-2xl font-bold mb-4">Products</Text>
